@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  local-server:
+    image: nginx:latest
+    depends_on:
+      - markketplace-api
+      - markketplace
+  prod-server:
+    image: nginx:latest
+    depends_on:
+      - markketplace-api-prod
+      - markketplace-prod
+
+  markketplace-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3300" # Medusa server port
+    environment:
+      DATABASE_URL: postgres://medusa:password@postgres:5432/medusadb
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  markketplace-api-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    ports:
+      - "9000:9000" # Medusa server port
+    environment:
+      DATABASE_URL: postgres://medusa:password@postgres:5432/medusadb
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  markketplace:
+    image: medusajs/storefront:latest
+    ports:
+      - "3300:80" # Expose the storefront on localhost:3300
+    environment:
+      NEXTJS_MEDUSA_BACKEND_URL: http://medusa-server:9000
+
+  markketplace-prod:
+    image: medusajs/storefront:latest
+    ports:
+      - "3300:80" # Expose the storefront on localhost:3300
+    environment:
+      NEXTJS_MEDUSA_BACKEND_URL: http://medusa-server:9000
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - "5432:5432" # Postgres port
+    environment:
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: medusadb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379" # Redis port
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
